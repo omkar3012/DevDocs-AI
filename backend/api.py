@@ -28,8 +28,9 @@ app.add_middleware(
     allow_origins=[
         "http://localhost:3000", 
         "http://frontend:3000",
+        "https://dev-docs-ai.vercel.app",  # Your actual Vercel domain
         "https://dev-docs-d6x8kasmn-omkar-ranes-projects.vercel.app",
-        os.getenv("FRONTEND_URL", "https://dev-docs-d6x8kasmn-omkar-ranes-projects.vercel.app")
+        os.getenv("FRONTEND_URL", "https://dev-docs-ai.vercel.app")
     ],
     allow_credentials=True,
     allow_methods=["*"],

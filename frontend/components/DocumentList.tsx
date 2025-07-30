@@ -3,27 +3,27 @@
 import React from 'react';
 import { FileText, Trash2, Calendar, Download } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { db, storage } from '../utils/supabase';
 
 interface DocumentListProps {
   documents: any[];
   onDocumentSelect: (document: any) => void;
   onDocumentDelete: () => void;
   loading: boolean;
+  userId: string;
 }
 
-export default function DocumentList({ documents, onDocumentSelect, onDocumentDelete, loading }: DocumentListProps) {
-  const handleDelete = async (docId: string) => {
+export default function DocumentList({ documents, onDocumentSelect, onDocumentDelete, loading, userId }: DocumentListProps) {
+  const handleDelete = async (docId: string, storagePath: string) => {
     if (!confirm('Are you sure you want to delete this document?')) return;
 
     try {
-      const response = await fetch(`/api/documents/${docId}`, {
-        method: 'DELETE',
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to delete document');
-      }
-
+      // Delete from storage
+      await storage.deleteFile(storagePath);
+      
+      // Delete from database
+      await db.deleteDocument(docId, userId);
+      
       toast.success('Document deleted successfully');
       onDocumentDelete();
     } catch (error) {
@@ -113,7 +113,7 @@ export default function DocumentList({ documents, onDocumentSelect, onDocumentDe
                   </div>
                 </div>
                 <button
-                  onClick={() => handleDelete(document.id)}
+                  onClick={() => handleDelete(document.id, document.storage_path)}
                   className="p-1 text-gray-400 hover:text-red-600 transition-colors"
                   title="Delete document"
                 >

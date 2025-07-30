@@ -4,7 +4,7 @@ import React, { useState, useCallback } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { Upload, FileText, File, AlertCircle, CheckCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { api } from '../utils/api';
+import { storage, db } from '../utils/supabase';
 
 interface DocumentUploadProps {
   supabase: any;
@@ -38,13 +38,23 @@ export default function DocumentUpload({ supabase, userId, onUploadComplete }: D
         };
         const docType = docTypeMap[fileExtension];
 
-        // Upload to backend
-        const formData = new FormData();
-        formData.append('file', file);
-        formData.append('user_id', userId);
-        formData.append('version', ''); // Optional version field
-
-        const result = await api.uploadDocument(formData);
+        // Generate unique document ID
+        const docId = crypto.randomUUID();
+        
+        // Upload file to Supabase storage
+        const { filePath } = await storage.uploadFile(file, userId, docId);
+        
+        // Store document metadata in database
+        const documentData = {
+          id: docId,
+          name: file.name,
+          version: '', // Optional version field
+          type: docType,
+          storage_path: filePath,
+          user_id: userId
+        };
+        
+        await db.insertDocument(documentData);
         toast.success(`${file.name} uploaded successfully!`);
         setUploadProgress((prev) => prev + (100 / acceptedFiles.length));
       }

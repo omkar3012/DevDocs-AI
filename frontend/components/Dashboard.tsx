@@ -7,7 +7,7 @@ import ChatInterface from './ChatInterface';
 import DocumentList from './DocumentList';
 import Sidebar from './Sidebar';
 import { LogOut, Upload, MessageSquare, FileText, Settings } from 'lucide-react';
-import { api } from '../utils/api';
+import { db } from '../utils/supabase';
 
 interface DashboardProps {
   session: any;
@@ -30,8 +30,8 @@ export default function Dashboard({ session, supabase }: DashboardProps) {
 
   const fetchDocuments = async () => {
     try {
-      const result = await api.getDocuments(user.id);
-      setDocuments(result.documents || []);
+      const documents = await db.getDocuments(user.id);
+      setDocuments(documents);
     } catch (error) {
       console.error('Error fetching documents:', error);
     } finally {
@@ -79,6 +79,7 @@ export default function Dashboard({ session, supabase }: DashboardProps) {
             onDocumentSelect={handleDocumentSelect}
             onDocumentDelete={fetchDocuments}
             loading={loading}
+            userId={user.id}
           />
         );
       case 'settings':
