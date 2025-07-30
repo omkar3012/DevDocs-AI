@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Send, FileText, MessageSquare, ThumbsUp, ThumbsDown, Upload } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { api } from '../utils/api';
 
 interface ChatInterfaceProps {
   supabase: any;
@@ -56,23 +57,7 @@ export default function ChatInterface({ supabase, userId, selectedDocument, docu
     setIsLoading(true);
 
     try {
-      const response = await fetch('/api/ask', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          question: inputValue,
-          doc_id: selectedDocId,
-          user_id: userId,
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to get answer');
-      }
-
-      const data = await response.json();
+      const data = await api.askQuestion(inputValue, selectedDocId, userId);
 
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
@@ -113,18 +98,12 @@ export default function ChatInterface({ supabase, userId, selectedDocument, docu
     if (!message) return;
 
     try {
-      await fetch('/api/feedback', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          query: message.content,
-          answer: message.content,
-          was_helpful: wasHelpful,
-          doc_id: selectedDocId,
-          user_id: userId,
-        }),
+      await api.submitFeedback({
+        query: message.content,
+        answer: message.content,
+        wasHelpful,
+        docId: selectedDocId,
+        userId,
       });
 
       toast.success('Thank you for your feedback!');

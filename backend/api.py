@@ -6,6 +6,7 @@ Handles file uploads, RAG-based Q&A, and feedback collection
 import os
 import time
 import uuid
+import json
 from typing import List, Optional
 from datetime import datetime
 
@@ -24,7 +25,12 @@ app = FastAPI(title="DevDocs AI API", version="1.0.0")
 # CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://frontend:3000"],
+    allow_origins=[
+        "http://localhost:3000", 
+        "http://frontend:3000",
+        "https://dev-docs-d6x8kasmn-omkar-ranes-projects.vercel.app",
+        os.getenv("FRONTEND_URL", "https://dev-docs-d6x8kasmn-omkar-ranes-projects.vercel.app")
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

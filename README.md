@@ -109,23 +109,26 @@ cd backend && uvicorn api:app --reload
 
 ## 🚀 Deployment
 
-### Vercel Deployment (Recommended)
+### Quick Deployment (Vercel + Render)
 
 1. **Fork this repository**
-2. **Deploy to Vercel**:
+2. **Deploy Backend to Render**:
+   - Go to [Render Dashboard](https://dashboard.render.com)
+   - Create new Web Service
+   - Connect your GitHub repository
+   - Set root directory to `backend`
+   - Configure environment variables
+
+3. **Deploy Frontend to Vercel**:
    [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/yourusername/devdocs-ai)
 
-3. **Configure Environment Variables** in Vercel:
-   ```
-   NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
-   NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
-   OPENAI_API_KEY=your_openai_api_key
-   SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
-   ```
+4. **Configure Environment Variables**:
+   - **Vercel**: Set `NEXT_PUBLIC_API_URL` to your Render backend URL
+   - **Render**: Set `FRONTEND_URL` to your Vercel frontend URL
 
-### Manual Deployment
+### Detailed Deployment Guide
 
-See [DEPLOYMENT.md](./DEPLOYMENT.md) for detailed deployment instructions.
+See [DEPLOYMENT_CONFIG.md](./DEPLOYMENT_CONFIG.md) for complete step-by-step instructions.
 
 ---
 

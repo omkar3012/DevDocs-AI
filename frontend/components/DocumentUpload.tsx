@@ -4,6 +4,7 @@ import React, { useState, useCallback } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { Upload, FileText, File, AlertCircle, CheckCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { api } from '../utils/api';
 
 interface DocumentUploadProps {
   supabase: any;
@@ -43,16 +44,7 @@ export default function DocumentUpload({ supabase, userId, onUploadComplete }: D
         formData.append('user_id', userId);
         formData.append('version', ''); // Optional version field
 
-        const response = await fetch('/api/upload', {
-          method: 'POST',
-          body: formData,
-        });
-
-        if (!response.ok) {
-          throw new Error(`Upload failed: ${response.statusText}`);
-        }
-
-        const result = await response.json();
+        const result = await api.uploadDocument(formData);
         toast.success(`${file.name} uploaded successfully!`);
         setUploadProgress((prev) => prev + (100 / acceptedFiles.length));
       }
