@@ -1,0 +1,44 @@
+{
+  "topics": [
+    {
+      "name": "api-doc-upload",
+      "partitions": 3,
+      "replication_factor": 1,
+      "configs": {
+        "retention.ms": "604800000",
+        "cleanup.policy": "delete"
+      },
+      "description": "Document upload events for processing"
+    },
+    {
+      "name": "query-logs",
+      "partitions": 3,
+      "replication_factor": 1,
+      "configs": {
+        "retention.ms": "2592000000",
+        "cleanup.policy": "delete"
+      },
+      "description": "Query logs for analytics"
+    },
+    {
+      "name": "feedback",
+      "partitions": 2,
+      "replication_factor": 1,
+      "configs": {
+        "retention.ms": "2592000000",
+        "cleanup.policy": "delete"
+      },
+      "description": "User feedback events"
+    },
+    {
+      "name": "document-processing",
+      "partitions": 2,
+      "replication_factor": 1,
+      "configs": {
+        "retention.ms": "86400000",
+        "cleanup.policy": "delete"
+      },
+      "description": "Document processing status updates"
+    }
+  ]
+} 

@@ -1,0 +1,32 @@
+{
+  "version": 2,
+  "name": "devdocs-ai",
+  "builds": [
+    {
+      "src": "frontend/package.json",
+      "use": "@vercel/next"
+    },
+    {
+      "src": "backend/api.py",
+      "use": "@vercel/python"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/api/(.*)",
+      "dest": "backend/api.py"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "frontend/$1"
+    }
+  ],
+  "env": {
+    "PYTHONPATH": "backend"
+  },
+  "functions": {
+    "backend/api.py": {
+      "runtime": "python3.9"
+    }
+  }
+} 
