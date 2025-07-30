@@ -1,29 +1,77 @@
 'use client';
 
-import React from 'react';
-import { FileText, Trash2, Calendar, Download } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { FileText, Trash2, Calendar, Download, Clock, CheckCircle, AlertCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { db, storage } from '../utils/supabase';
+import { api } from '../utils/api';
 
 interface DocumentListProps {
   documents: any[];
   onDocumentSelect: (document: any) => void;
   onDocumentDelete: () => void;
   loading: boolean;
-  userId: string;
+  supabase: any;
 }
 
-export default function DocumentList({ documents, onDocumentSelect, onDocumentDelete, loading, userId }: DocumentListProps) {
-  const handleDelete = async (docId: string, storagePath: string) => {
+export default function DocumentList({ documents, onDocumentSelect, onDocumentDelete, loading, supabase }: DocumentListProps) {
+  const [documentStatuses, setDocumentStatuses] = useState<{[key: string]: any}>({});
+
+  // Check document processing status
+  useEffect(() => {
+    const checkDocumentStatuses = async () => {
+      const statuses: {[key: string]: any} = {};
+      
+      for (const doc of documents) {
+        try {
+          const status = await api.checkDocumentStatus(doc.id);
+          statuses[doc.id] = status;
+        } catch (error) {
+          console.warn(`Failed to check status for document ${doc.id}:`, error);
+          statuses[doc.id] = { status: 'unknown', chunk_count: 0 };
+        }
+      }
+      
+      setDocumentStatuses(statuses);
+    };
+
+    if (documents.length > 0) {
+      checkDocumentStatuses();
+    }
+  }, [documents]);
+  const handleDelete = async (docId: string) => {
     if (!confirm('Are you sure you want to delete this document?')) return;
 
     try {
-      // Delete from storage
-      await storage.deleteFile(storagePath);
-      
-      // Delete from database
-      await db.deleteDocument(docId, userId);
-      
+      // Delete from Supabase database
+      const { error: dbError } = await supabase
+        .from('api_documents')
+        .delete()
+        .eq('id', docId);
+
+      if (dbError) throw dbError;
+
+      // Delete from Supabase storage (if file exists)
+      const document = documents.find(doc => doc.id === docId);
+      if (document?.storage_path) {
+        const { error: storageError } = await supabase.storage
+          .from('api-docs')
+          .remove([document.storage_path]);
+
+        if (storageError) {
+          console.warn('Failed to delete file from storage:', storageError);
+        }
+      }
+
+      // Delete chunks from database
+      const { error: chunksError } = await supabase
+        .from('api_chunks')
+        .delete()
+        .eq('doc_id', docId);
+
+      if (chunksError) {
+        console.warn('Failed to delete chunks:', chunksError);
+      }
+
       toast.success('Document deleted successfully');
       onDocumentDelete();
     } catch (error) {
@@ -113,7 +161,7 @@ export default function DocumentList({ documents, onDocumentSelect, onDocumentDe
                   </div>
                 </div>
                 <button
-                  onClick={() => handleDelete(document.id, document.storage_path)}
+                  onClick={() => handleDelete(document.id)}
                   className="p-1 text-gray-400 hover:text-red-600 transition-colors"
                   title="Delete document"
                 >
@@ -131,11 +179,45 @@ export default function DocumentList({ documents, onDocumentSelect, onDocumentDe
                     Version: {document.version}
                   </div>
                 )}
-                {document.chunk_count && (
-                  <div className="text-sm text-gray-600">
-                    {document.chunk_count} chunks processed
-                  </div>
-                )}
+                
+                {/* Processing Status */}
+                <div className="flex items-center gap-2 text-sm">
+                  {(() => {
+                    const status = documentStatuses[document.id]?.status || 'unknown';
+                    const chunkCount = documentStatuses[document.id]?.chunk_count || 0;
+                    
+                    switch (status) {
+                      case 'ready':
+                        return (
+                          <>
+                            <CheckCircle size={14} className="text-green-600" />
+                            <span className="text-green-600">Ready ({chunkCount} chunks)</span>
+                          </>
+                        );
+                      case 'processing':
+                        return (
+                          <>
+                            <Clock size={14} className="text-yellow-600" />
+                            <span className="text-yellow-600">Processing...</span>
+                          </>
+                        );
+                      case 'failed':
+                        return (
+                          <>
+                            <AlertCircle size={14} className="text-red-600" />
+                            <span className="text-red-600">Failed</span>
+                          </>
+                        );
+                      default:
+                        return (
+                          <>
+                            <Clock size={14} className="text-gray-400" />
+                            <span className="text-gray-400">Checking status...</span>
+                          </>
+                        );
+                    }
+                  })()}
+                </div>
               </div>
 
               <div className="flex gap-2">

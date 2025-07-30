@@ -28,9 +28,8 @@ app.add_middleware(
     allow_origins=[
         "http://localhost:3000", 
         "http://frontend:3000",
-        "https://dev-docs-ai.vercel.app",  # Your actual Vercel domain
         "https://dev-docs-d6x8kasmn-omkar-ranes-projects.vercel.app",
-        os.getenv("FRONTEND_URL", "https://dev-docs-ai.vercel.app")
+        os.getenv("FRONTEND_URL", "https://dev-docs-d6x8kasmn-omkar-ranes-projects.vercel.app")
     ],
     allow_credentials=True,
     allow_methods=["*"],
@@ -297,6 +296,38 @@ async def search_chunks(doc_id: str, query: str, limit: int = 10):
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Search failed: {str(e)}")
+
+@app.get("/status/{doc_id}")
+async def get_document_status(doc_id: str):
+    """Get document processing status and chunk count"""
+    try:
+        # Get document info
+        doc_result = supabase.table("api_documents").select("*").eq("id", doc_id).execute()
+        if not doc_result.data:
+            raise HTTPException(status_code=404, detail="Document not found")
+        
+        document = doc_result.data[0]
+        
+        # Get chunk count
+        chunks_result = supabase.table("api_chunks").select("id").eq("doc_id", doc_id).execute()
+        chunk_count = len(chunks_result.data)
+        
+        # Determine status
+        status = "processing"
+        if chunk_count > 0:
+            status = "ready"
+        elif document.get("status") == "failed":
+            status = "failed"
+        
+        return {
+            "doc_id": doc_id,
+            "status": status,
+            "chunk_count": chunk_count,
+            "document": document
+        }
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Status check failed: {str(e)}")
 
 @app.get("/analytics/{user_id}")
 async def get_analytics(user_id: str):

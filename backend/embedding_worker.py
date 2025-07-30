@@ -64,6 +64,11 @@ class EmbeddingWorker:
                 # Create embeddings and store in database
                 self.store_chunks_with_embeddings(chunks, doc_id)
                 
+                # Update document status to ready
+                self.supabase.table("api_documents").update(
+                    {"status": "ready"}
+                ).eq("id", doc_id).execute()
+                
                 print(f"Successfully processed {len(chunks)} chunks for document {doc_id}")
                 
             finally:

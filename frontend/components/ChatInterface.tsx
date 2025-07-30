@@ -45,6 +45,19 @@ export default function ChatInterface({ supabase, userId, selectedDocument, docu
   const handleSendMessage = async () => {
     if (!inputValue.trim() || !selectedDocId) return;
 
+    // Check if document is ready for questions
+    try {
+      const status = await api.checkDocumentStatus(selectedDocId);
+      if (status.status !== 'ready') {
+        toast.error('Document is still processing. Please wait until it\'s ready.');
+        return;
+      }
+    } catch (error) {
+      console.error('Error checking document status:', error);
+      toast.error('Unable to verify document status. Please try again.');
+      return;
+    }
+
     const userMessage: Message = {
       id: Date.now().toString(),
       type: 'user',
@@ -77,7 +90,7 @@ export default function ChatInterface({ supabase, userId, selectedDocument, docu
         id: (Date.now() + 1).toString(),
         type: 'assistant',
         content: 'Sorry, I encountered an error while processing your question. Please try again.',
-        timestamp: new Date(),
+      timestamp: new Date(),
       };
       
       setMessages(prev => [...prev, errorMessage]);

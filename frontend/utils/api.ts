@@ -11,6 +11,7 @@ export const apiConfig = {
     feedback: `${API_BASE_URL}/feedback`,
     search: `${API_BASE_URL}/search`,
     analytics: `${API_BASE_URL}/analytics`,
+    status: `${API_BASE_URL}/status`,
   }
 };
 
@@ -70,12 +71,23 @@ export const api = {
     return response.json();
   },
 
-  // Get documents for user
+  // Get documents for user (from backend - for processing status)
   getDocuments: async (userId: string) => {
     const response = await fetch(`${API_BASE_URL}/documents/${userId}`);
     
     if (!response.ok) {
       throw new Error(`Failed to fetch documents: ${response.statusText}`);
+    }
+    
+    return response.json();
+  },
+
+  // Check document processing status
+  checkDocumentStatus: async (docId: string) => {
+    const response = await fetch(`${API_BASE_URL}/status/${docId}`);
+    
+    if (!response.ok) {
+      throw new Error(`Failed to check document status: ${response.statusText}`);
     }
     
     return response.json();
