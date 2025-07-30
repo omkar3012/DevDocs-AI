@@ -27,7 +27,7 @@ This guide will help you deploy DevDocs AI to GitHub and Vercel for production u
 
 ### 2. Vercel Deployment
 
-#### Option A: Deploy via Vercel Dashboard
+#### Option A: Deploy Frontend Only (Recommended)
 
 1. **Connect Repository**:
    - Go to [Vercel Dashboard](https://vercel.com/dashboard)
@@ -46,14 +46,15 @@ This guide will help you deploy DevDocs AI to GitHub and Vercel for production u
    ```
    NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
    NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
-   OPENAI_API_KEY=your_openai_api_key
-   SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
+   NEXT_PUBLIC_API_URL=https://your-backend-url.com
    ```
 
 4. **Deploy**:
    - Click "Deploy"
    - Wait for build to complete
-   - Your app will be available at `https://your-project.vercel.app`
+   - Your frontend will be available at `https://your-project.vercel.app`
+
+**Note**: This deploys only the frontend. You'll need to deploy the backend separately (see Backend API Deployment section below).
 
 #### Option B: Deploy via Vercel CLI
 
