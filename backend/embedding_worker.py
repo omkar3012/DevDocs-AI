@@ -104,9 +104,9 @@ class EmbeddingWorker:
                 if not result.data:
                     print(f"Failed to store chunk {i} for document {doc_id}")
             
-            # Update document status to processed
+            # Update document chunk count (status already updated to 'ready')
             self.supabase.table("api_documents").update(
-                {"status": "processed", "chunk_count": len(chunks)}
+                {"chunk_count": len(chunks)}
             ).eq("id", doc_id).execute()
             
         except Exception as e:

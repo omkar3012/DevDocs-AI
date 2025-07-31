@@ -186,7 +186,8 @@ async def upload_document(
             "version": version,
             "type": doc_type,
             "storage_path": storage_path,
-            "user_id": user_id
+            "user_id": user_id,
+            "status": "processing"
         }
         
         result = supabase.table("api_documents").insert(document_data).execute()
