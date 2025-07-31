@@ -25,15 +25,25 @@ import tempfile
 
 app = FastAPI(title="DevDocs AI API", version="1.0.0")
 
-# CORS middleware
+# --- CORS middleware -------------------------------------------------------
+# Accept a comma-separated ALLOWED_ORIGINS env variable so we don't have to
+# hard-code preview/production URLs in source control.
+# Example in Render dashboard:
+#   ALLOWED_ORIGINS=https://dev-docs-ai.vercel.app,https://devdocs-ai.onrender.com
+# Fallback to localhost when the variable is not set (local dev).
+
+_default_origins = [
+    "http://localhost:3000",
+    "http://frontend:3000",
+]
+
+origins_env = os.getenv("ALLOWED_ORIGINS")
+if origins_env:
+    _default_origins.extend([o.strip() for o in origins_env.split(",") if o.strip()])
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000", 
-        "http://frontend:3000",
-        "https://dev-docs-d6x8kasmn-omkar-ranes-projects.vercel.app",
-        os.getenv("FRONTEND_URL", "https://dev-docs-d6x8kasmn-omkar-ranes-projects.vercel.app")
-    ],
+    allow_origins=_default_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
