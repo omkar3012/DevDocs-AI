@@ -19,6 +19,9 @@ import httpx
 from supabase_client import get_supabase_client
 from rag_service import get_rag_service
 from kafka_producer import KafkaProducer
+from utils.loaders import DocumentLoader
+from utils.splitters import DocumentSplitter
+import tempfile
 
 app = FastAPI(title="DevDocs AI API", version="1.0.0")
 
@@ -39,6 +42,8 @@ app.add_middleware(
 # Initialize services
 supabase = get_supabase_client()
 kafka_producer = KafkaProducer()
+loader = DocumentLoader()
+splitter = DocumentSplitter()
 
 # Pydantic models
 class AskRequest(BaseModel):
@@ -60,6 +65,74 @@ class DocumentResponse(BaseModel):
     version: Optional[str]
     type: str
     created_at: datetime
+
+async def process_document_immediately(doc_id: str, storage_path: str, doc_type: str, user_id: str, filename: str):
+    """Process a document immediately: load, chunk, embed, and store"""
+    try:
+        print(f"🔄 Processing document immediately: {filename} (ID: {doc_id})")
+        
+        # Download file from Supabase Storage
+        file_content = supabase.storage.from_("api-docs").download(storage_path)
+        
+        # Save to temporary file
+        with tempfile.NamedTemporaryFile(delete=False, suffix=os.path.splitext(filename)[1]) as temp_file:
+            temp_file.write(file_content)
+            temp_file_path = temp_file.name
+        
+        try:
+            # Load document based on type
+            if doc_type == "openapi":
+                documents = loader.load_openapi(temp_file_path)
+            elif doc_type == "pdf":
+                documents = loader.load_pdf(temp_file_path)
+            elif doc_type == "markdown":
+                documents = loader.load_markdown(temp_file_path)
+            else:
+                raise ValueError(f"Unsupported document type: {doc_type}")
+            
+            # Split documents into chunks
+            chunks = splitter.split_documents(documents)
+            
+            # Create embeddings and store in database
+            rag_service = get_rag_service()
+            
+            for i, chunk in enumerate(chunks):
+                # Get embedding for chunk text
+                embedding = rag_service.get_embedding(chunk["text"])
+                
+                # Prepare chunk data
+                chunk_data = {
+                    "doc_id": doc_id,
+                    "chunk_text": chunk["text"],
+                    "metadata": chunk.get("metadata", {}),
+                    "embedding": embedding,
+                    "chunk_index": i
+                }
+                
+                # Insert into database
+                result = supabase.table("api_chunks").insert(chunk_data).execute()
+                
+                if not result.data:
+                    print(f"⚠️  Failed to store chunk {i} for document {doc_id}")
+            
+            # Update document status to ready
+            supabase.table("api_documents").update(
+                {"status": "ready"}
+            ).eq("id", doc_id).execute()
+            
+            print(f"✅ Successfully processed {len(chunks)} chunks for document {doc_id}")
+            
+        finally:
+            # Clean up temporary file
+            os.unlink(temp_file_path)
+            
+    except Exception as e:
+        print(f"❌ Error processing document {doc_id}: {str(e)}")
+        # Update document status to failed
+        supabase.table("api_documents").update(
+            {"status": "failed", "error": str(e)}
+        ).eq("id", doc_id).execute()
+        raise
 
 @app.get("/")
 async def root():
@@ -121,16 +194,29 @@ async def upload_document(
         if not result.data:
             raise HTTPException(status_code=500, detail="Failed to store document metadata")
 
-        # Emit Kafka event for processing
-        kafka_event = {
-            "doc_id": doc_id,
-            "storage_path": storage_path,
-            "doc_type": doc_type,
-            "user_id": user_id,
-            "filename": file.filename
-        }
-        
-        kafka_producer.send_message("api-doc-upload", kafka_event)
+        # Try to emit Kafka event for processing (if available)
+        try:
+            kafka_event = {
+                "doc_id": doc_id,
+                "storage_path": storage_path,
+                "doc_type": doc_type,
+                "user_id": user_id,
+                "filename": file.filename
+            }
+            
+            kafka_producer.send_message("api-doc-upload", kafka_event)
+            print(f"✅ Kafka event sent for document {doc_id}")
+        except Exception as e:
+            print(f"⚠️  Kafka event failed: {str(e)}")
+            # Continue without Kafka - we'll process immediately
+
+        # Process document immediately if Kafka is not available
+        try:
+            await process_document_immediately(doc_id, storage_path, doc_type, user_id, file.filename)
+            print(f"✅ Document processed immediately: {doc_id}")
+        except Exception as e:
+            print(f"⚠️  Immediate processing failed: {str(e)}")
+            # Document will remain in "processing" status
 
         return {
             "message": "Document uploaded successfully",
@@ -284,11 +370,11 @@ async def search_chunks(doc_id: str, query: str, limit: int = 10):
     try:
         # Get chunks using vector similarity search
         result = supabase.rpc(
-            "match_chunks",
+            "match_documents",
             {
                 "query_embedding": get_rag_service().get_embedding(query),
                 "match_count": limit,
-                "doc_id": doc_id
+                "filter": {"doc_id": doc_id}
             }
         ).execute()
         
@@ -328,6 +414,36 @@ async def get_document_status(doc_id: str):
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Status check failed: {str(e)}")
+
+@app.post("/process/{doc_id}")
+async def process_document_manually(doc_id: str):
+    """Manually trigger document processing"""
+    try:
+        # Get document info
+        doc_result = supabase.table("api_documents").select("*").eq("id", doc_id).execute()
+        if not doc_result.data:
+            raise HTTPException(status_code=404, detail="Document not found")
+        
+        document = doc_result.data[0]
+        
+        # Check if already processed
+        chunks_result = supabase.table("api_chunks").select("id").eq("doc_id", doc_id).execute()
+        if len(chunks_result.data) > 0:
+            return {"message": "Document already processed", "doc_id": doc_id, "status": "ready"}
+        
+        # Process the document
+        await process_document_immediately(
+            doc_id=doc_id,
+            storage_path=document["storage_path"],
+            doc_type=document["type"],
+            user_id=document["user_id"],
+            filename=document["name"]
+        )
+        
+        return {"message": "Document processed successfully", "doc_id": doc_id, "status": "ready"}
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Processing failed: {str(e)}")
 
 @app.get("/analytics/{user_id}")
 async def get_analytics(user_id: str):

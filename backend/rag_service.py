@@ -342,15 +342,15 @@ Answer:"""
             # Get query embedding
             query_embedding = self.get_embedding(question)
             
-            # Use direct call to match_chunks with lower threshold
+            # Use direct call to match_documents with lower threshold
             supabase = get_supabase_client()
             result = supabase.rpc(
-                "match_chunks",
+                "match_documents",
                 {
                     "query_embedding": query_embedding,
                     "match_threshold": 0.1,  # Lower threshold for better recall
                     "match_count": 5,
-                    "doc_id": doc_id
+                    "filter": {"doc_id": doc_id}
                 }
             ).execute()
             

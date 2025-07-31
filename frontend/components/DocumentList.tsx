@@ -1,9 +1,10 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { FileText, Trash2, Calendar, Download, Clock, CheckCircle, AlertCircle } from 'lucide-react';
+import { FileText, Trash2, Calendar, Download } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { api } from '../utils/api';
+import ProcessingStatus from './ProcessingStatus';
 
 interface DocumentListProps {
   documents: any[];
@@ -36,8 +37,21 @@ export default function DocumentList({ documents, onDocumentSelect, onDocumentDe
 
     if (documents.length > 0) {
       checkDocumentStatuses();
+      
+      // Auto-refresh processing documents every 5 seconds
+      const interval = setInterval(() => {
+        const processingDocs = documents.filter(doc => 
+          documentStatuses[doc.id]?.status === 'processing'
+        );
+        
+        if (processingDocs.length > 0) {
+          checkDocumentStatuses();
+        }
+      }, 5000);
+      
+      return () => clearInterval(interval);
     }
-  }, [documents]);
+  }, [documents, documentStatuses]);
   const handleDelete = async (docId: string) => {
     if (!confirm('Are you sure you want to delete this document?')) return;
 
@@ -181,43 +195,17 @@ export default function DocumentList({ documents, onDocumentSelect, onDocumentDe
                 )}
                 
                 {/* Processing Status */}
-                <div className="flex items-center gap-2 text-sm">
-                  {(() => {
-                    const status = documentStatuses[document.id]?.status || 'unknown';
-                    const chunkCount = documentStatuses[document.id]?.chunk_count || 0;
-                    
-                    switch (status) {
-                      case 'ready':
-                        return (
-                          <>
-                            <CheckCircle size={14} className="text-green-600" />
-                            <span className="text-green-600">Ready ({chunkCount} chunks)</span>
-                          </>
-                        );
-                      case 'processing':
-                        return (
-                          <>
-                            <Clock size={14} className="text-yellow-600" />
-                            <span className="text-yellow-600">Processing...</span>
-                          </>
-                        );
-                      case 'failed':
-                        return (
-                          <>
-                            <AlertCircle size={14} className="text-red-600" />
-                            <span className="text-red-600">Failed</span>
-                          </>
-                        );
-                      default:
-                        return (
-                          <>
-                            <Clock size={14} className="text-gray-400" />
-                            <span className="text-gray-400">Checking status...</span>
-                          </>
-                        );
-                    }
-                  })()}
-                </div>
+                <ProcessingStatus
+                  docId={document.id}
+                  status={documentStatuses[document.id]?.status || 'unknown'}
+                  chunkCount={documentStatuses[document.id]?.chunk_count || 0}
+                  onStatusUpdate={(newStatus) => {
+                    setDocumentStatuses(prev => ({
+                      ...prev,
+                      [document.id]: newStatus
+                    }));
+                  }}
+                />
               </div>
 
               <div className="flex gap-2">

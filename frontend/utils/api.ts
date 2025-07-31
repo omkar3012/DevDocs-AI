@@ -93,6 +93,19 @@ export const api = {
     return response.json();
   },
 
+  // Process document manually
+  processDocument: async (docId: string) => {
+    const response = await fetch(`${API_BASE_URL}/process/${docId}`, {
+      method: 'POST',
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Failed to process document: ${response.statusText}`);
+    }
+    
+    return response.json();
+  },
+
   // Submit feedback
   submitFeedback: async (feedback: {
     query: string;
