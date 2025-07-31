@@ -158,4 +158,17 @@ export const api = {
     
     return response.json();
   },
+
+  // Debug: Force process all documents
+  debugProcessAllDocuments: async (userId: string) => {
+    const response = await fetch(`${API_BASE_URL}/debug/process-all/${userId}`, {
+      method: 'POST',
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Failed to debug process documents: ${response.statusText}`);
+    }
+    
+    return response.json();
+  },
 }; 

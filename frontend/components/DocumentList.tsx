@@ -155,6 +155,44 @@ export default function DocumentList({ documents, onDocumentSelect, onDocumentDe
         </p>
       </div>
 
+      {/* Debug Processing Button */}
+      {documents.length > 0 && (
+        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
+          <h3 className="text-sm font-medium text-yellow-800 mb-2">Debug Tools</h3>
+          <button
+            onClick={async () => {
+              try {
+                const userId = documents[0]?.user_id; // Get user ID from first document
+                if (!userId) {
+                  toast.error('No documents found to process');
+                  return;
+                }
+                
+                toast.loading('Force processing all documents...', { duration: 10000 });
+                const result = await api.debugProcessAllDocuments(userId);
+                
+                toast.success(`Processing complete: ${result.processed} processed, ${result.failed} failed`);
+                
+                // Refresh document statuses after a short delay
+                setTimeout(() => {
+                  window.location.reload();
+                }, 2000);
+                
+              } catch (error) {
+                toast.error('Failed to force process documents');
+                console.error('Debug processing error:', error);
+              }
+            }}
+            className="px-4 py-2 bg-yellow-600 text-white rounded hover:bg-yellow-700 text-sm"
+          >
+            🔧 Force Process All Documents
+          </button>
+          <p className="text-xs text-yellow-600 mt-1">
+            Use this if documents are stuck in "Processing" status
+          </p>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {documents.map((document) => (
           <div

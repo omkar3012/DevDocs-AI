@@ -215,8 +215,14 @@ async def upload_document(
             await process_document_immediately(doc_id, storage_path, doc_type, user_id, file.filename)
             print(f"✅ Document processed immediately: {doc_id}")
         except Exception as e:
-            print(f"⚠️  Immediate processing failed: {str(e)}")
-            # Document will remain in "processing" status
+            print(f"❌ Immediate processing failed: {str(e)}")
+            import traceback
+            traceback.print_exc()
+            # Update document status to failed
+            supabase.table("api_documents").update(
+                {"status": "failed", "error": str(e)}
+            ).eq("id", doc_id).execute()
+            print(f"📝 Document {doc_id} marked as failed due to processing error")
 
         return {
             "message": "Document uploaded successfully",
@@ -444,6 +450,71 @@ async def process_document_manually(doc_id: str):
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Processing failed: {str(e)}")
+
+@app.post("/debug/process-all/{user_id}")
+async def debug_process_all_documents(user_id: str):
+    """Debug endpoint: Force process all documents for a user that have no chunks"""
+    try:
+        # Get all documents for the user
+        docs_result = supabase.table("api_documents").select("*").eq("user_id", user_id).execute()
+        documents = docs_result.data
+        
+        processed_count = 0
+        failed_count = 0
+        results = []
+        
+        for doc in documents:
+            doc_id = doc['id']
+            doc_name = doc['name']
+            
+            # Check if document has chunks
+            chunks_result = supabase.table("api_chunks").select("id").eq("doc_id", doc_id).execute()
+            chunk_count = len(chunks_result.data)
+            
+            if chunk_count == 0:  # No chunks, needs processing
+                try:
+                    print(f"🔄 Force processing document: {doc_name} (ID: {doc_id})")
+                    await process_document_immediately(
+                        doc_id=doc_id,
+                        storage_path=doc["storage_path"],
+                        doc_type=doc["type"],
+                        user_id=doc["user_id"],
+                        filename=doc["name"]
+                    )
+                    processed_count += 1
+                    results.append({
+                        "doc_id": doc_id,
+                        "name": doc_name,
+                        "status": "processed"
+                    })
+                    print(f"✅ Successfully processed: {doc_name}")
+                except Exception as e:
+                    failed_count += 1
+                    results.append({
+                        "doc_id": doc_id,
+                        "name": doc_name,
+                        "status": "failed",
+                        "error": str(e)
+                    })
+                    print(f"❌ Failed to process {doc_name}: {str(e)}")
+            else:
+                results.append({
+                    "doc_id": doc_id,
+                    "name": doc_name,
+                    "status": "already_processed",
+                    "chunk_count": chunk_count
+                })
+        
+        return {
+            "message": f"Processing complete: {processed_count} processed, {failed_count} failed",
+            "total_documents": len(documents),
+            "processed": processed_count,
+            "failed": failed_count,
+            "results": results
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Debug processing failed: {str(e)}")
 
 @app.get("/analytics/{user_id}")
 async def get_analytics(user_id: str):

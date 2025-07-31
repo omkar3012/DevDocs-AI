@@ -1,0 +1,45 @@
+services:
+  # Main API Service (already deployed)
+  - type: web
+    name: devdocs-api
+    runtime: python3
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn api:app --host 0.0.0.0 --port $PORT
+    plan: starter
+    envVars:
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: FRONTEND_URL
+        sync: false
+
+  # Kafka Worker Service (new)
+  - type: worker
+    name: devdocs-worker
+    runtime: python3
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: python embedding_worker.py
+    plan: starter
+    envVars:
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: KAFKA_BOOTSTRAP_SERVERS
+        value: localhost:9092
+      # For managed Kafka service (if using):
+      # - key: KAFKA_BOOTSTRAP_SERVERS
+      #   value: your-kafka-broker-url:9092
+
+  # Optional: Kafka Service (if you want managed Kafka)
+  # Note: Render doesn't provide managed Kafka, you'd need external service
+  # - type: redis  # Using Redis as message broker alternative
+  #   name: devdocs-redis
+  #   plan: starter
