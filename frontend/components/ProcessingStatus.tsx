@@ -39,65 +39,77 @@ export default function ProcessingStatus({ docId, status, chunkCount, onStatusUp
     }
   };
 
-  switch (status) {
-    case 'ready':
-      return (
-        <div className="flex items-center gap-2 text-sm">
-          <CheckCircle size={14} className="text-green-600" />
-          <span className="text-green-600">Ready ({chunkCount} chunks)</span>
-        </div>
-      );
-      
-    case 'processing':
-      return (
-        <div className="flex items-center gap-2 text-sm">
-          <Clock size={14} className="text-yellow-600" />
-          <span className="text-yellow-600">Processing...</span>
-          <button
-            onClick={handleRetry}
-            disabled={isProcessing}
-            className="text-xs px-2 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
-          >
-            {isProcessing ? (
-              <>
-                <RefreshCw size={10} className="animate-spin" />
-                Retrying...
-              </>
-            ) : (
-              'Retry'
-            )}
-          </button>
-        </div>
-      );
-      
-    case 'failed':
-      return (
-        <div className="flex items-center gap-2 text-sm">
-          <AlertCircle size={14} className="text-red-600" />
-          <span className="text-red-600">Failed</span>
-          <button
-            onClick={handleRetry}
-            disabled={isProcessing}
-            className="text-xs px-2 py-1 bg-red-600 text-white rounded hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
-          >
-            {isProcessing ? (
-              <>
-                <RefreshCw size={10} className="animate-spin" />
-                Retrying...
-              </>
-            ) : (
-              'Retry'
-            )}
-          </button>
-        </div>
-      );
-      
-    default:
-      return (
-        <div className="flex items-center gap-2 text-sm">
-          <Clock size={14} className="text-gray-400" />
-          <span className="text-gray-400">Checking status...</span>
-        </div>
-      );
+  // Handle different status cases
+  if (status === 'ready' || chunkCount > 0) {
+    return (
+      <div className="flex items-center gap-2 text-sm">
+        <CheckCircle size={14} className="text-green-600" />
+        <span className="text-green-600">Ready ({chunkCount} chunks)</span>
+      </div>
+    );
   }
+  
+  if (status === 'failed') {
+    return (
+      <div className="flex items-center gap-2 text-sm">
+        <AlertCircle size={14} className="text-red-600" />
+        <span className="text-red-600">Failed</span>
+        <button
+          onClick={handleRetry}
+          disabled={isProcessing}
+          className="text-xs px-2 py-1 bg-red-600 text-white rounded hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
+        >
+          {isProcessing ? (
+            <>
+              <RefreshCw size={10} className="animate-spin" />
+              Retrying...
+            </>
+          ) : (
+            'Retry'
+          )}
+        </button>
+      </div>
+    );
+  }
+  
+  if (status === 'processing') {
+    return (
+      <div className="flex items-center gap-2 text-sm">
+        <Clock size={14} className="text-yellow-600" />
+        <span className="text-yellow-600">Processing...</span>
+        <button
+          onClick={handleRetry}
+          disabled={isProcessing}
+          className="text-xs px-2 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
+        >
+          {isProcessing ? (
+            <>
+              <RefreshCw size={10} className="animate-spin" />
+              Retrying...
+            </>
+          ) : (
+            'Retry'
+          )}
+        </button>
+      </div>
+    );
+  }
+  
+  // Handle loading state
+  if (status === 'loading') {
+    return (
+      <div className="flex items-center gap-2 text-sm">
+        <RefreshCw size={14} className="text-blue-500 animate-spin" />
+        <span className="text-blue-500">Loading...</span>
+      </div>
+    );
+  }
+  
+  // Default: unknown or checking status  
+  return (
+    <div className="flex items-center gap-2 text-sm">
+      <Clock size={14} className="text-gray-400" />
+      <span className="text-gray-400">Checking status...</span>
+    </div>
+  );
 } 

@@ -405,11 +405,13 @@ async def get_document_status(doc_id: str):
         chunk_count = len(chunks_result.data)
         
         # Determine status
-        status = "processing"
+        # Priority: Check chunk count first (most reliable indicator)
         if chunk_count > 0:
             status = "ready"
         elif document.get("status") == "failed":
             status = "failed"
+        else:
+            status = "processing"
         
         return {
             "doc_id": doc_id,

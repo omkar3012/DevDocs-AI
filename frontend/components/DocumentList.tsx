@@ -16,6 +16,7 @@ interface DocumentListProps {
 
 export default function DocumentList({ documents, onDocumentSelect, onDocumentDelete, loading, supabase }: DocumentListProps) {
   const [documentStatuses, setDocumentStatuses] = useState<{[key: string]: any}>({});
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
 
   // Check document processing status
   useEffect(() => {
@@ -26,32 +27,41 @@ export default function DocumentList({ documents, onDocumentSelect, onDocumentDe
         try {
           const status = await api.checkDocumentStatus(doc.id);
           statuses[doc.id] = status;
+          
+          // Log status for debugging
+          console.log(`Document ${doc.name}: ${status.status} (${status.chunk_count} chunks)`);
         } catch (error) {
           console.warn(`Failed to check status for document ${doc.id}:`, error);
-          statuses[doc.id] = { status: 'unknown', chunk_count: 0 };
+          // If API call fails, keep previous status if available, otherwise set to unknown
+          statuses[doc.id] = documentStatuses[doc.id] || { status: 'unknown', chunk_count: 0 };
         }
       }
       
       setDocumentStatuses(statuses);
+      setIsInitialLoad(false);
     };
 
     if (documents.length > 0) {
       checkDocumentStatuses();
       
-      // Auto-refresh processing documents every 5 seconds
+      // Auto-refresh only documents that are actually processing
       const interval = setInterval(() => {
-        const processingDocs = documents.filter(doc => 
-          documentStatuses[doc.id]?.status === 'processing'
-        );
+        const processingDocs = documents.filter(doc => {
+          const currentStatus = documentStatuses[doc.id]?.status;
+          return currentStatus === 'processing' || currentStatus === 'unknown';
+        });
         
         if (processingDocs.length > 0) {
+          console.log(`Auto-refreshing status for ${processingDocs.length} processing documents`);
           checkDocumentStatuses();
+        } else {
+          console.log('All documents are ready or failed, stopping auto-refresh');
         }
       }, 5000);
       
       return () => clearInterval(interval);
     }
-  }, [documents, documentStatuses]);
+  }, [documents]); // Remove documentStatuses from dependency to prevent infinite loop
   const handleDelete = async (docId: string) => {
     if (!confirm('Are you sure you want to delete this document?')) return;
 
@@ -235,7 +245,7 @@ export default function DocumentList({ documents, onDocumentSelect, onDocumentDe
                 {/* Processing Status */}
                 <ProcessingStatus
                   docId={document.id}
-                  status={documentStatuses[document.id]?.status || 'unknown'}
+                  status={documentStatuses[document.id]?.status || (isInitialLoad ? 'loading' : 'unknown')}
                   chunkCount={documentStatuses[document.id]?.chunk_count || 0}
                   onStatusUpdate={(newStatus) => {
                     setDocumentStatuses(prev => ({
