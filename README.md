@@ -1,12 +1,8 @@
-# DevDocs AI: RAG-Powered Developer Documentation Assistant
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/yourusername/devdocs-ai)
-[![Open in Gitpod](https://gitpod.io/button/open-in-gitpod.svg)](https://gitpod.io/#https://github.com/yourusername/devdocs-ai)
 
 ## 🚀 Live Demo
 
-**[Try DevDocs AI Live](https://your-app.vercel.app)**
+**[Try DevDocs AI Live](https://dev-docs-ai.vercel.app/)**
 
 ## 📖 Overview
 
